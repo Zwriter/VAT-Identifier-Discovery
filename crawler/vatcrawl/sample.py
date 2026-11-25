@@ -16,10 +16,11 @@ import json
 
 import pandas as pd
 
-from .pipeline import size_band
+from .bands import size_band
 
 COLS = ["CompanyName", "CompanyNumber", "RegAddress.AddressLine1", "RegAddress.PostTown", "RegAddress.PostCode",
-        "CompanyCategory", "CompanyStatus", "IncorporationDate", "Accounts.AccountCategory", "SICCode.SicText_1"]
+        "CompanyCategory", "CompanyStatus", "IncorporationDate", "Accounts.AccountCategory", "SICCode.SicText_1",
+        "Mortgages.NumMortCharges", "Accounts.LastMadeUpDate", "likely_vat"]
 
 
 def main(argv=None):

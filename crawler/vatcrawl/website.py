@@ -15,8 +15,10 @@ import re
 from dataclasses import dataclass, field
 from urllib.parse import urljoin, urlparse
 
+from . import vat as V
 from .attribute import Decision, Target, best, judge
 from .fetch import Fetcher
+from .signals import Signal, find_signal
 
 MAX_PAGES = 10
 MAX_PDFS = 5
@@ -37,6 +39,8 @@ class SiteResult:
     reason: str = ""              # found | no_sitemap_no_home | site_no_vat | company_number_only | vat_no_anchor | blocked
     pages: list[str] = field(default_factory=list)
     rejected: list[Decision] = field(default_factory=list)
+    identity_confirmed: bool = False        # company name or number appears on the site
+    signal: Signal | None = None            # registration evidence (only if identity confirmed)
 
 
 def _same_site(url: str, domain: str) -> bool:
@@ -79,6 +83,10 @@ def crawl_site(f: Fetcher, domain: str, target: Target) -> SiteResult:
     home = f.get(base + "/")
     if home.kind == "error" and home.error == "robots_disallow":
         res.reason = "blocked"
+        return res
+    if home.kind == "error" and home.status == 0:
+        # connection-level failure (DNS, TLS, proxy, timeout): not evidence that the site lacks a VAT number
+        res.reason = f"fetch_error:{home.error}"
         return res
     locs = _sitemap_urls(f, base)
     links = home.links if home.kind == "html" else []
@@ -125,6 +133,12 @@ def crawl_site(f: Fetcher, domain: str, target: Target) -> SiteResult:
         res.rejected += [x for x in decisions if not x.accepted]
         if not any_number_seen and _mentions_company_number(text, target):
             any_number_seen = True
+
+    # Is this really the company's site? (protects against wrongly matched domains)
+    core = V.name_core(target.name)
+    res.identity_confirmed = any_number_seen or any(core and core in V.normalise_name(t) for _, t in texts)
+    if res.identity_confirmed:
+        res.signal = find_signal(texts)
 
     if res.rejected:
         res.reason = "vat_no_anchor"

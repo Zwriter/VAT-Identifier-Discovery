@@ -138,3 +138,15 @@ def test_report_finalise():
     assert finalise(dict(base, outcome="unknown", registration_evidence="job ad"))["outcome"] == "registered_not_found"
     lo, hi = wilson(2, 17)
     assert 0.02 < lo < 0.05 and 0.3 < hi < 0.36
+
+
+def test_domain_similarity():
+    from vatcrawl.find_domains import similarity, is_directory, domain_label
+    assert domain_label("www.lgmproducts.com") == "lgmproducts"
+    assert domain_label("shop.example.co.uk") == "example"
+    assert similarity("LGM PRODUCTS LIMITED", "www.lgmproducts.com") >= 0.5
+    assert similarity("AUTOFIX ACCIDENT REPAIR CENTRE LTD", "www.autofixarc.com") >= 0.5   # initials
+    assert similarity("DALE TECHNICHE LIMITED", "www.dale-techniche.co.uk") == 1.0
+    assert similarity("LGM PRODUCTS LIMITED", "www.monsterenergy.com") < 0.5
+    assert is_directory("find-and-update.company-information.service.gov.uk")
+    assert is_directory("www.endole.co.uk")

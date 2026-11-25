@@ -125,7 +125,7 @@ def test_end_to_end(tmp_path, servers):
     domains = tmp_path / "domains.csv"
     _write_csv(domains, [{"company_number": "03574049", "domain": f"http://127.0.0.1:{servers['lgm']}"}])
     search = tmp_path / "search.csv"
-    _write_csv(search, [{"query": '"09351572" VAT', "rank": "1", "url": "http://publicaccess.example.gov.uk/doc.pdf",
+    _write_csv(search, [{"query": '"09351572" "VAT Reg"', "rank": "1", "url": "http://publicaccess.example.gov.uk/doc.pdf",
                          "title": "Registered in England No 09351572 V.A.T. Reg. No. 202 ...",
                          "snippet": "Registered in England No 09351572. V.A.T. Reg. No. 202 5358 43. 10 Cawdry Buildings. "
                                     "Fountain Street. Leek. Staffordshire. ST13 6JP."}])
@@ -187,3 +187,21 @@ def test_unreachable_site_is_not_reported_as_empty():
     from vatcrawl.website import crawl_site
     r = crawl_site(Fetcher(delay=0, timeout=2), "http://127.0.0.1:9", Target("03574049", "LGM PRODUCTS LIMITED"))
     assert r.reason.startswith("fetch_error")
+
+
+def test_site_signal_needs_identity(servers):
+    """A pricing phrase counts only on a site that names the company."""
+    from vatcrawl.attribute import Target
+    from vatcrawl.fetch import Fetcher
+    from vatcrawl.website import crawl_site
+    saved = dict(SITES["autofix"])
+    SITES["autofix"]["/our-services"] = "<html><body>Bodywork from £300 + VAT</body></html>"
+    try:
+        ok = crawl_site(Fetcher(delay=0), f"http://127.0.0.1:{servers['autofix']}",
+                        Target("SC673813", "AUTOFIX ACCIDENT REPAIR CENTRE LTD", "EH20 9QH"))
+        other = crawl_site(Fetcher(delay=0), f"http://127.0.0.1:{servers['autofix']}",
+                           Target("10932374", "MEADGATE POOL LIMITED", "CM2 7NS"))
+    finally:
+        SITES["autofix"].clear(); SITES["autofix"].update(saved)
+    assert ok.identity_confirmed and ok.signal and ok.signal.kind == "registered"
+    assert not other.identity_confirmed and other.signal is None

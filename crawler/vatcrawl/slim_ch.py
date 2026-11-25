@@ -28,7 +28,7 @@ import time
 import pandas as pd
 
 from . import vat as V
-from .pipeline import size_band
+from .bands import likely_vat, size_band
 
 KEEP = [
     "CompanyNumber", "CompanyName",
@@ -37,24 +37,6 @@ KEEP = [
     "CompanyStatus", "CompanyCategory", "Accounts.AccountCategory", "SICCode.SicText_1",
     "IncorporationDate", "Mortgages.NumMortCharges", "Accounts.LastMadeUpDate",
 ]
-
-
-def likely_vat(band: str, charges: str) -> str:
-    """Rough prior from Companies House alone. A guide for prioritising and for the denominator,
-    never evidence for a specific company."""
-    if band == "dormant":
-        return "unlikely"
-    if band == "medium_large":
-        return "very_likely"
-    try:
-        has_charge = int(charges or 0) > 0
-    except ValueError:
-        has_charge = False
-    if band == "small" or has_charge:
-        return "likely"
-    if band == "micro":
-        return "possible"
-    return "unknown"
 
 
 def main(argv=None):

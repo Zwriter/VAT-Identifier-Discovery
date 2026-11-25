@@ -78,6 +78,16 @@ def main(argv=None):
         tot = sum(c.values())
         print(f"  {band:16} n={tot:3}  " + ", ".join(f"{k}={v}" for k, v in c.most_common()))
 
+    print("\nNot found, split by registration prior (Companies House only; not proof either way):")
+    nf = [r for r in rows if r["outcome"] in ("unknown", "registered_not_found")]
+    for prior in ("very_likely", "likely", "possible", "unknown", "unlikely"):
+        grp = [r for r in nf if (r.get("registration_prior") or "unknown") == prior]
+        if grp:
+            ev = sum(r["outcome"] == "registered_not_found" for r in grp)
+            print(f"  {prior:12} {len(grp):4}  (with registration evidence: {ev})")
+    likely_missed = sum((r.get("registration_prior") in ("very_likely", "likely")) for r in nf)
+    print(f"  -> likely discovery failures (prior likely/very_likely): {likely_missed}")
+
     print("\nPer route (checked candidates only):")
     for route in ("peppol", "website", "search"):
         cand = [r for r in rows if r["route"] == route and r["outcome"].startswith("found_")

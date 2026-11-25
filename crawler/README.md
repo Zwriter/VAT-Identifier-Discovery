@@ -61,6 +61,22 @@ python -m vatcrawl.pipeline --sample sample.csv --peppol ../peppol_uk.csv \
 python -m vatcrawl.report --results results.csv --out results_final.csv
 ```
 
+Registration evidence from a website is only used when the site is confirmed to be the company's
+(its name or company number appears on it), so a wrongly matched domain can't produce evidence.
+Every result also carries `registration_prior` (from Companies House size band / charges), and
+`report.py` splits "not found" into likely discovery failures vs unlikely-registered companies.
+
+## Masked-Peppol test
+
+```bash
+python -m vatcrawl.peppol_test build --peppol ../data/peppol_uk.csv --ch ../data/ch_slim.csv --n 40 --seed 7 \
+    --exclude-dormant --out-sample ../data/peppol_test_sample.csv --out-truth ../data/peppol_test_truth.csv
+python -m vatcrawl.find_domains --sample ../data/peppol_test_sample.csv --out ../data/peppol_test_domains.csv
+python -m vatcrawl.pipeline --sample ../data/peppol_test_sample.csv --domains ../data/peppol_test_domains.csv \
+    --routes website --out ../data/peppol_test_results.csv --log ../data/peppol_test_log.jsonl
+python -m vatcrawl.peppol_test evaluate --results ../data/peppol_test_results.csv --truth ../data/peppol_test_truth.csv
+```
+
 ## Outputs
 
 - `results.csv` — one row per company: outcome, reason code, VAT, route, evidence type,
@@ -73,8 +89,8 @@ python -m vatcrawl.report --results results.csv --out results_final.csv
 |---|---|
 | `found_verified` | HMRC valid and name matches |
 | `found_wrong_company` / `found_invalid` | false positives (reported, never hidden) |
-| `registered_not_found` | evidence of registration, number not found |
-| `probably_not_registered` | dormant / strike-off |
+| `registered_not_found` | evidence of registration, number not found — automatic when the company's own site says e.g. "prices exclude VAT" / "+ VAT" (`site_mentions_vat_pricing`), or added by hand |
+| `probably_not_registered` | dormant / strike-off, or the site says "not VAT registered" (`site_says_not_vat_registered`) |
 | `unknown` | reason code: `no_website_found`, `site_no_vat`, `company_number_only`, `vat_no_anchor`, `blocked` |
 
 ## Politeness and limits
@@ -90,7 +106,7 @@ python -m vatcrawl.report --results results.csv --out results_final.csv
 python -m pytest -q tests
 ```
 
-25 tests, built from real cases met during research (LGM Products letterhead + EORI, Dale Techniche
+31 tests, built from real cases met during research (LGM Products letterhead + EORI, Dale Techniche
 footer with "No .4955915", Sammons Architectural planning-portal snippet, a directory page showing its
 own Irish VAT number, the "APM (SALES & SERVICE) UK" false match, Autofix in Peppol), plus an offline
 end-to-end run against local fake sites.

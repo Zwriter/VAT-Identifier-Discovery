@@ -26,6 +26,7 @@ from pathlib import Path
 
 from . import vat as V
 from .attribute import Target
+from .bands import LIKELY, likely_vat, size_band  # noqa: F401  (size_band re-exported)
 from .config import env_float, load_env
 from .fetch import Fetcher
 from .peppol import PeppolIndex
@@ -34,26 +35,9 @@ from .website import crawl_site
 
 FIELDS = ["company_number", "company_name", "postcode", "accounts_category", "status", "size_band",
           "outcome", "reason", "vat", "route", "evidence", "source_url", "context",
-          "domain", "website_reason", "search_queries", "rejected_candidates",
+          "domain", "website_reason", "site_identity", "search_queries", "rejected_candidates",
           "hmrc_status", "hmrc_name", "hmrc_postcode", "name_match", "postcode_district_match",
-          "registration_evidence", "requests_made", "bytes_read", "seconds"]
-
-NOT_REGISTERED_HINTS = {"DORMANT": "dormant"}
-
-
-def size_band(cat: str) -> str:
-    c = (cat or "").upper()
-    if "DORMANT" in c:
-        return "dormant"
-    if "NO ACCOUNTS" in c:
-        return "no_accounts_yet"
-    if "MICRO" in c:
-        return "micro"
-    if any(k in c for k in ("TOTAL EXEMPTION", "UNAUDITED", "SMALL", "AUDIT EXEMPTION")):
-        return "small"
-    if any(k in c for k in ("FULL", "GROUP", "MEDIUM")):
-        return "medium_large"
-    return "other"
+          "registration_prior", "registration_evidence", "requests_made", "bytes_read", "seconds"]
 
 
 def load_domains(path: str | None) -> dict[str, str]:
@@ -74,7 +58,8 @@ def process(row: dict, peppol: PeppolIndex | None, fetcher: Fetcher, domains: di
     cat = row.get("Accounts.AccountCategory", "")
     out = {k: "" for k in FIELDS}
     out.update(company_number=num, company_name=row["CompanyName"], postcode=target.postcode,
-               accounts_category=cat, status=row.get("CompanyStatus", ""), size_band=size_band(cat))
+               accounts_category=cat, status=row.get("CompanyStatus", ""), size_band=size_band(cat),
+               registration_prior=row.get("likely_vat") or likely_vat(size_band(cat), row.get("Mortgages.NumMortCharges")))
     rejected: list[str] = []
 
     def done(outcome, reason, **kw):
@@ -93,6 +78,7 @@ def process(row: dict, peppol: PeppolIndex | None, fetcher: Fetcher, domains: di
 
     # Route 3 first-pass for domain discovery happens inside the search route below
     search_out = None
+    site_signal = None
 
     # Route 2 — website
     domain = domains.get(num, "")
@@ -100,11 +86,13 @@ def process(row: dict, peppol: PeppolIndex | None, fetcher: Fetcher, domains: di
         out["domain"] = domain
         sr = crawl_site(fetcher, domain, target)
         out["website_reason"] = sr.reason
+        out["site_identity"] = "confirmed" if sr.identity_confirmed else "unconfirmed"
         rejected += [f"{d.vat}:{d.reason}" for d in sr.rejected]
         if sr.decision:
             d = sr.decision
             return done("found_unverified", "website", vat=d.vat, route="website", evidence=d.evidence,
                         source_url=sr.source_url, context=d.context[:300])
+        site_signal = sr.signal
 
     # Route 3 — search
     if "search" in routes and backend is not None:
@@ -126,7 +114,13 @@ def process(row: dict, peppol: PeppolIndex | None, fetcher: Fetcher, domains: di
                 return done("found_unverified", "website_from_search", vat=d.vat, route="website",
                             evidence=d.evidence, source_url=sr.source_url, context=d.context[:300])
 
-    # Route 4 hints (manual evidence is added later)
+    # Route 4 — registration evidence found on the company's own (identity-confirmed) site
+    if site_signal is not None:
+        ev = f'"{site_signal.text}" @ {site_signal.url}'
+        if site_signal.kind == "not_registered":
+            return done("probably_not_registered", "site_says_not_vat_registered", registration_evidence=ev)
+        return done("registered_not_found", "site_mentions_vat_pricing", registration_evidence=ev)
+
     band = size_band(cat)
     status = (row.get("CompanyStatus") or "").lower()
     if band == "dormant":
