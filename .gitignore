@@ -1,0 +1,18 @@
+# ---------------------------------------------------------------------------
+# Raw source data — large, downloaded separately (see README "Data setup")
+# ---------------------------------------------------------------------------
+unseen_data/
+
+# Everything generated from the raw data (Peppol extract, slim Companies House file,
+# samples, results, logs). Regenerate with the steps in README; only the folder note is kept.
+data/*
+!data/README.md
+
+# ---------------------------------------------------------------------------
+# Environment and tooling
+# ---------------------------------------------------------------------------
+.venv/
+.env
+__pycache__/
+.pytest_cache/
+*.jsonl
