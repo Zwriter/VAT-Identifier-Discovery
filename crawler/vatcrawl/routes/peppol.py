@@ -12,7 +12,7 @@ import csv
 from collections import defaultdict
 from pathlib import Path
 
-from . import vat as V
+from ..core import vat as V
 
 
 class PeppolIndex:

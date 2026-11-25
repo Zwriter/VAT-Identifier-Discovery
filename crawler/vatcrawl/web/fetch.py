@@ -15,7 +15,11 @@ from urllib.parse import urljoin, urlparse
 import requests
 
 try:
-    from bs4 import BeautifulSoup
+    import warnings
+
+    from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
+    # Some sites serve XML (feeds, sitemaps) as pages; reading them as text is fine for our purpose.
+    warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 except ImportError:  # pragma: no cover
     BeautifulSoup = None
 
@@ -26,7 +30,7 @@ except ImportError:  # pragma: no cover
 
 import os
 
-from .config import load_env
+from ..config import load_env
 
 load_env()
 DEFAULT_UA = os.environ.get("CRAWLER_USER_AGENT") or \

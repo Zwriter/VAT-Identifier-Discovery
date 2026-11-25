@@ -15,7 +15,7 @@ Final outcomes:
   probably_not_registered / unknown  unchanged
 
 Usage:
-  python -m vatcrawl.report --results results.csv --out results_final.csv
+  python -m vatcrawl.run.report --results results.csv --out results_final.csv
 """
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ import csv
 import math
 from collections import Counter, defaultdict
 
-from . import vat as V
+from ..core import vat as V
 
 
 def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:

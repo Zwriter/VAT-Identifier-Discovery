@@ -8,7 +8,7 @@ A wrong domain is low-risk: the website route still only accepts a VAT number th
 target's own company number or postcode + name. A wrong domain just ends in 'site_no_vat'.
 
 Usage (from crawler/, venv active, BRAVE_API_KEY in .env):
-  python -m vatcrawl.find_domains --sample ../data/sample.csv --out ../data/domains.csv --skip-dormant
+  python -m vatcrawl.prep.find_domains --sample ../data/sample.csv --out ../data/domains.csv --skip-dormant
 """
 from __future__ import annotations
 
@@ -17,9 +17,9 @@ import csv
 import re
 from urllib.parse import urlparse
 
-from . import vat as V
-from .bands import size_band
-from .search import DIRECTORY_DOMAINS, BraveBackend
+from ..core import vat as V
+from ..core.bands import size_band
+from ..routes.search import DIRECTORY_DOMAINS, BraveBackend
 
 GENERIC = {"LTD", "LIMITED", "PLC", "LLP", "LP", "CIC", "CO", "COMPANY", "UK", "GB", "GROUP", "HOLDINGS",
            "HOLDING", "SERVICES", "SERVICE", "SOLUTIONS", "INTERNATIONAL", "AND", "THE", "OF", "EUROPE",
@@ -52,6 +52,10 @@ def similarity(name: str, host: str) -> float:
     score = hits / len(toks)
     initials = "".join(t[0] for t in toks)
     if len(initials) >= 2 and label.startswith(initials):
+        score = max(score, 0.75)
+    # initials of ALL words incl. single letters and generic ones: "D A UTILITY SERVICES" -> daus
+    all_initials = "".join(t[0] for t in V.name_core(name).lower().split())
+    if len(all_initials) >= 3 and label == all_initials:
         score = max(score, 0.75)
     joined = "".join(toks)
     if len(label) >= 4 and label in joined:

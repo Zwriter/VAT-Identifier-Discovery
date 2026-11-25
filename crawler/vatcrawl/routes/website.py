@@ -15,10 +15,10 @@ import re
 from dataclasses import dataclass, field
 from urllib.parse import urljoin, urlparse
 
-from . import vat as V
-from .attribute import Decision, Target, best, judge
-from .fetch import Fetcher
-from .signals import Signal, find_signal
+from ..core import vat as V
+from ..core.attribute import Decision, Target, best, judge
+from ..web.fetch import Fetcher
+from ..core.signals import Signal, find_signal
 
 MAX_PAGES = 10
 MAX_PDFS = 5
@@ -150,5 +150,5 @@ def crawl_site(f: Fetcher, domain: str, target: Target) -> SiteResult:
 
 
 def _mentions_company_number(text: str, target: Target) -> bool:
-    from .vat import find_company_number
+    from ..core.vat import find_company_number
     return bool(find_company_number(text, target.company_number))

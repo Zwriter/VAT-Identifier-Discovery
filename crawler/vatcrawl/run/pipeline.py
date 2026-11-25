@@ -14,7 +14,7 @@ After HMRC checks (hmrc_status=valid + name match) found_unverified becomes foun
 "unknown" rows with registration evidence become registered_not_found.
 
 Usage:
-  python -m vatcrawl.pipeline --sample sample.csv --peppol ../peppol_uk.csv \
+  python -m vatcrawl.run.pipeline --sample sample.csv --peppol ../peppol_uk.csv \
       --domains domains.csv --search-csv manual_search.csv --out results.csv
 """
 from __future__ import annotations
@@ -24,14 +24,14 @@ import csv
 import time
 from pathlib import Path
 
-from . import vat as V
-from .attribute import Target
-from .bands import LIKELY, likely_vat, size_band  # noqa: F401  (size_band re-exported)
-from .config import env_float, load_env
-from .fetch import Fetcher
-from .peppol import PeppolIndex
-from .search import BraveBackend, ManualBackend, run_search
-from .website import crawl_site
+from ..core import vat as V
+from ..core.attribute import Target
+from ..core.bands import LIKELY, likely_vat, size_band  # noqa: F401  (size_band re-exported)
+from ..config import env_float, load_env
+from ..web.fetch import Fetcher
+from ..routes.peppol import PeppolIndex
+from ..routes.search import BraveBackend, ManualBackend, run_search
+from ..routes.website import crawl_site
 
 FIELDS = ["company_number", "company_name", "postcode", "accounts_category", "status", "size_band",
           "outcome", "reason", "vat", "route", "evidence", "source_url", "context",

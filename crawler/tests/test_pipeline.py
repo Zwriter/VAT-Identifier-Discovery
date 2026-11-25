@@ -13,7 +13,7 @@ import threading
 
 import pytest
 
-from vatcrawl import pipeline
+from vatcrawl.run import pipeline
 
 
 def _pdf_bytes(text: str) -> bytes:
@@ -151,9 +151,9 @@ def test_end_to_end(tmp_path, servers):
 
 
 def test_template_site_without_vat(servers):
-    from vatcrawl.attribute import Target
-    from vatcrawl.fetch import Fetcher
-    from vatcrawl.website import crawl_site
+    from vatcrawl.core.attribute import Target
+    from vatcrawl.web.fetch import Fetcher
+    from vatcrawl.routes.website import crawl_site
     r = crawl_site(Fetcher(delay=0), f"http://127.0.0.1:{servers['autofix']}",
                    Target("SC673813", "AUTOFIX ACCIDENT REPAIR CENTRE LTD", "EH20 9QH"))
     assert r.decision is None and r.reason == "site_no_vat"
@@ -161,9 +161,9 @@ def test_template_site_without_vat(servers):
 
 def test_pdf_letterhead_found_when_page_has_no_vat(servers):
     """Remove the VAT from the contact page: the crawler must still find it in the linked PDF."""
-    from vatcrawl.attribute import Target
-    from vatcrawl.fetch import Fetcher
-    from vatcrawl.website import crawl_site
+    from vatcrawl.core.attribute import Target
+    from vatcrawl.web.fetch import Fetcher
+    from vatcrawl.routes.website import crawl_site
     saved = SITES["lgm"]["/contact/"]
     SITES["lgm"]["/contact/"] = "<html><body>Contact us</body></html>"
     try:
@@ -175,25 +175,25 @@ def test_pdf_letterhead_found_when_page_has_no_vat(servers):
 
 
 def test_directory_footer_vat_rejected(servers):
-    from vatcrawl.attribute import Target, best, judge
-    from vatcrawl.fetch import Fetcher
+    from vatcrawl.core.attribute import Target, best, judge
+    from vatcrawl.web.fetch import Fetcher
     p = Fetcher(delay=0).get(f"http://127.0.0.1:{servers['directory']}/")
     assert best(judge(p.text, Target("03574049", "LGM PRODUCTS LIMITED", "GU52 8EA"))) is None
 
 
 def test_unreachable_site_is_not_reported_as_empty():
-    from vatcrawl.attribute import Target
-    from vatcrawl.fetch import Fetcher
-    from vatcrawl.website import crawl_site
+    from vatcrawl.core.attribute import Target
+    from vatcrawl.web.fetch import Fetcher
+    from vatcrawl.routes.website import crawl_site
     r = crawl_site(Fetcher(delay=0, timeout=2), "http://127.0.0.1:9", Target("03574049", "LGM PRODUCTS LIMITED"))
     assert r.reason.startswith("fetch_error")
 
 
 def test_site_signal_needs_identity(servers):
     """A pricing phrase counts only on a site that names the company."""
-    from vatcrawl.attribute import Target
-    from vatcrawl.fetch import Fetcher
-    from vatcrawl.website import crawl_site
+    from vatcrawl.core.attribute import Target
+    from vatcrawl.web.fetch import Fetcher
+    from vatcrawl.routes.website import crawl_site
     saved = dict(SITES["autofix"])
     SITES["autofix"]["/our-services"] = "<html><body>Bodywork from £300 + VAT</body></html>"
     try:

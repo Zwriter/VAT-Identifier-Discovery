@@ -1,4 +1,4 @@
-from vatcrawl.signals import find_signal
+from vatcrawl.core.signals import find_signal
 
 
 def test_registered_phrases():

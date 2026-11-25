@@ -1,6 +1,7 @@
 import csv
 
-from vatcrawl import peppol_test, slim_ch
+from vatcrawl.experiments import peppol_test
+from vatcrawl.prep import slim_ch
 
 
 def _w(path, rows):

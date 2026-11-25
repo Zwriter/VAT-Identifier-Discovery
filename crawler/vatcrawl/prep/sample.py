@@ -6,7 +6,7 @@ so small strata (medium/large companies) aren't swamped by micro companies. The 
 counts are printed and written next to the sample so the draw can be repeated exactly.
 
 Usage:
-  python -m vatcrawl.sample --ch ../unseen_data/BasicCompanyDataAsOneFile-2026-11-01.csv --per-band 10 --seed 42 --out sample.csv
+  python -m vatcrawl.prep.sample --ch ../unseen_data/BasicCompanyDataAsOneFile-2026-11-01.csv --per-band 10 --seed 42 --out sample.csv
 """
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ import json
 
 import pandas as pd
 
-from .bands import size_band
+from ..core.bands import size_band
 
 COLS = ["CompanyName", "CompanyNumber", "RegAddress.AddressLine1", "RegAddress.PostTown", "RegAddress.PostCode",
         "CompanyCategory", "CompanyStatus", "IncorporationDate", "Accounts.AccountCategory", "SICCode.SicText_1",

@@ -17,12 +17,12 @@ Bias to state in the write-up: Peppol companies are e-invoicing adopters (more B
 digitally organised), so recall here is an optimistic upper bound for the long tail.
 
 Usage (from crawler/):
-  python -m vatcrawl.peppol_test build --peppol ../data/peppol_uk.csv --ch ../data/ch_slim.csv \
+  python -m vatcrawl.experiments.peppol_test build --peppol ../data/peppol_uk.csv --ch ../data/ch_slim.csv \
       --n 40 --seed 7 --out-sample ../data/peppol_test_sample.csv --out-truth ../data/peppol_test_truth.csv
-  python -m vatcrawl.find_domains --sample ../data/peppol_test_sample.csv --out ../data/peppol_test_domains.csv
-  python -m vatcrawl.pipeline --sample ../data/peppol_test_sample.csv --domains ../data/peppol_test_domains.csv \
+  python -m vatcrawl.prep.find_domains --sample ../data/peppol_test_sample.csv --out ../data/peppol_test_domains.csv
+  python -m vatcrawl.run.pipeline --sample ../data/peppol_test_sample.csv --domains ../data/peppol_test_domains.csv \
       --routes website --out ../data/peppol_test_results.csv --log ../data/peppol_test_log.jsonl
-  python -m vatcrawl.peppol_test evaluate --results ../data/peppol_test_results.csv --truth ../data/peppol_test_truth.csv
+  python -m vatcrawl.experiments.peppol_test evaluate --results ../data/peppol_test_results.csv --truth ../data/peppol_test_truth.csv
 """
 from __future__ import annotations
 
@@ -35,8 +35,8 @@ from collections import Counter, defaultdict
 
 import pandas as pd
 
-from . import vat as V
-from .report import wilson
+from ..core import vat as V
+from ..run.report import wilson
 
 CH_COLS = ["CompanyName", "CompanyNumber", "RegAddress.AddressLine1", "RegAddress.PostTown", "RegAddress.PostCode",
            "CompanyCategory", "CompanyStatus", "IncorporationDate", "Accounts.AccountCategory", "SICCode.SicText_1",
@@ -76,6 +76,10 @@ def build(a):
           f"(ambiguous: {sum(len(r) > 1 for r in hits.values()):,})")
     if a.exclude_dormant:
         matched = {k: r for k, r in matched.items() if r.get("size_band") != "dormant"}
+    if a.bands:
+        keep = {b.strip() for b in a.bands.split(",")}
+        matched = {k: r for k, r in matched.items() if r.get("size_band") in keep}
+        print(f"Restricted to bands {sorted(keep)}: {len(matched):,} candidates")
 
     # 3. Random draw
     keys = sorted(matched)
@@ -89,7 +93,7 @@ def build(a):
         for k, r in zip(keys, sample):
             w.writerow([V.normalise_company_number(r["CompanyNumber"]), r["CompanyName"], unique[k],
                         pnames[k], pdate[k], r.get("size_band", "")])
-    meta = {"seed": a.seed, "n": len(sample), "peppol_unique_names": len(unique), "unique_matches": len(matched),
+    meta = {"seed": a.seed, "n": len(sample), "bands_filter": a.bands or "all", "peppol_unique_names": len(unique), "unique_matches": len(matched),
             "by_band": Counter(r.get("size_band", "") for r in sample),
             "caveat": "Peppol companies are e-invoicing adopters; recall is an optimistic upper bound.",
             "note": "Name-only matching; ~1 in 15 such matches was the wrong company in the HMRC spot-check."}
@@ -191,6 +195,7 @@ def main(argv=None):
     b.add_argument("--n", type=int, default=40)
     b.add_argument("--seed", type=int, default=7)
     b.add_argument("--exclude-dormant", action="store_true")
+    b.add_argument("--bands", help="Only these size bands, e.g. medium_large or small,medium_large")
     b.add_argument("--out-sample", default="peppol_test_sample.csv")
     b.add_argument("--out-truth", default="peppol_test_truth.csv")
     e = sub.add_parser("evaluate")

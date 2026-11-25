@@ -20,10 +20,10 @@ from urllib.parse import urlparse
 
 import requests
 
-from . import vat as V
-from .attribute import Decision, Target, best, judge
-from .config import env_float, env_int, load_env
-from .fetch import Fetcher
+from ..core import vat as V
+from ..core.attribute import Decision, Target, best, judge
+from ..config import env_float, env_int, load_env
+from ..web.fetch import Fetcher
 
 # Directory / aggregator domains: useful for leads, never treated as the company's own site.
 DIRECTORY_DOMAINS = (

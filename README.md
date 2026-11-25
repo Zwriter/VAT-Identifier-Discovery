@@ -12,7 +12,7 @@ records *why* it failed when it didn't. Details: [`crawler/README.md`](crawler/R
 ```
 VAT Identifier/
 ├── crawler/
-│   ├── vatcrawl/          # the pipeline (parsing, attribution, routes, sampling, reporting)
+│   ├── vatcrawl/          # core/ web/ routes/ prep/ run/ experiments/ (see crawler/README.md)
 │   ├── scripts/           # Peppol Directory tools (preview + UK extract)
 │   ├── tests/
 │   └── README.md
@@ -44,7 +44,7 @@ from it is committed. Download it into `unseen_data/` and run the steps below.
 
 ```bat
 cd crawler
-python -m vatcrawl.slim_ch --ch ../unseen_data/BasicCompanyDataAsOneFile-2026-11-01.csv --out ../data/ch_slim.csv --active-only --drop-other-band
+python -m vatcrawl.prep.slim_ch --ch ../unseen_data/BasicCompanyDataAsOneFile-2026-11-01.csv --out ../data/ch_slim.csv --active-only --drop-other-band
 ```
 
 ### 2. Peppol Directory export (e-invoicing registry; UK participants use their VAT number, scheme 9932)
@@ -69,7 +69,7 @@ python scripts\peppol_preview.py ..\unseen_data\peppol.json --uk --count
 ### 3. Draw the sample
 
 ```bat
-python -m vatcrawl.sample --ch ../data/ch_slim.csv --per-band 10 --seed 42 --out ../data/sample.csv
+python -m vatcrawl.prep.sample --ch ../data/ch_slim.csv --per-band 10 --seed 42 --out ../data/sample.csv
 ```
 
 ### 4. Run

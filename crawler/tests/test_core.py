@@ -1,6 +1,6 @@
 """Tests built from real cases found during research (see Experiment 01 and Findings notes)."""
-from vatcrawl import vat as V
-from vatcrawl.attribute import Target, judge, best, template_numbers
+from vatcrawl.core import vat as V
+from vatcrawl.core.attribute import Target, judge, best, template_numbers
 
 
 # ---------------------------------------------------------------- checksum
@@ -126,7 +126,7 @@ def test_template_detection():
 
 
 def test_report_finalise():
-    from vatcrawl.report import finalise, wilson
+    from vatcrawl.run.report import finalise, wilson
     base = {"company_name": "AUTOFIX ACCIDENT REPAIR CENTRE LTD", "postcode": "EH20 9QH",
             "outcome": "found_unverified", "registration_evidence": ""}
     ok = finalise(dict(base, hmrc_status="valid", hmrc_name="AUTOFIX ACCIDENT REPAIR CENTRE", hmrc_postcode="EH20 9QH"))
@@ -141,12 +141,14 @@ def test_report_finalise():
 
 
 def test_domain_similarity():
-    from vatcrawl.find_domains import similarity, is_directory, domain_label
+    from vatcrawl.prep.find_domains import similarity, is_directory, domain_label
     assert domain_label("www.lgmproducts.com") == "lgmproducts"
     assert domain_label("shop.example.co.uk") == "example"
     assert similarity("LGM PRODUCTS LIMITED", "www.lgmproducts.com") >= 0.5
     assert similarity("AUTOFIX ACCIDENT REPAIR CENTRE LTD", "www.autofixarc.com") >= 0.5   # initials
     assert similarity("DALE TECHNICHE LIMITED", "www.dale-techniche.co.uk") == 1.0
     assert similarity("LGM PRODUCTS LIMITED", "www.monsterenergy.com") < 0.5
+    assert similarity("D A UTILITY SERVICES LIMITED", "www.daus.co.uk") >= 0.5        # all-word initials
+    assert similarity("MEADGATE POOL LIMITED", "www.meadgateprimary.com") <= 0.5    # wrong site, borderline
     assert is_directory("find-and-update.company-information.service.gov.uk")
     assert is_directory("www.endole.co.uk")

@@ -14,7 +14,7 @@ Derived
   company_number_norm, size_band, postcode_district, name_core, likely_vat (rough prior, not ground truth)
 
 Usage
-  python -m vatcrawl.slim_ch --ch ../unseen_data/BasicCompanyDataAsOneFile-2026-11-01.csv \
+  python -m vatcrawl.prep.slim_ch --ch ../unseen_data/BasicCompanyDataAsOneFile-2026-11-01.csv \
       --out ../data/ch_slim.csv --active-only
   Optional: --drop-dormant  --drop-other-band  --drop-strike-off
 """
@@ -27,8 +27,8 @@ import time
 
 import pandas as pd
 
-from . import vat as V
-from .bands import likely_vat, size_band
+from ..core import vat as V
+from ..core.bands import likely_vat, size_band
 
 KEEP = [
     "CompanyNumber", "CompanyName",

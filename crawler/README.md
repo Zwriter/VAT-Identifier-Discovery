@@ -9,6 +9,33 @@ Design notes: `PKM/VAT Identifier Discovery - Crawler Design.md`.
 **Data setup is required first** (Companies House file, Peppol export): see the main [README](../README.md#data-setup-required--not-included-in-this-repository).
 Peppol tools live in [`scripts/`](scripts/): `peppol_preview.py` (inspect) and `peppol_uk_fast.py` (UK extract → `data/peppol_uk.csv`).
 
+## Package layout
+
+```
+vatcrawl/
+├── config.py          # .env loader
+├── core/              # no network: parsing, validation, attribution, signals
+│   ├── vat.py         #   VAT / company-number / name / postcode parsing and normalisation
+│   ├── attribute.py   #   is this VAT number the target company's? (adjacency rules)
+│   ├── signals.py     #   registration evidence: "prices exclude VAT", "not VAT registered"
+│   └── bands.py       #   size bands + registration prior from Companies House fields
+├── web/
+│   └── fetch.py       # polite HTTP: robots.txt, rate limits, PDF text, request log
+├── routes/            # discovery routes
+│   ├── peppol.py      #   lookup in the Peppol UK extract
+│   ├── website.py     #   company website + linked PDFs
+│   └── search.py      #   number-keyed search (manual CSV or Brave API)
+├── prep/              # data preparation
+│   ├── slim_ch.py     #   shrink the Companies House file
+│   ├── sample.py      #   stratified random sample
+│   └── find_domains.py#   company websites via Brave -> domains.csv
+├── run/
+│   ├── pipeline.py    # run the routes for a sample -> results.csv
+│   └── report.py      # HMRC-verified outcomes + Part 2 tables
+└── experiments/
+    └── peppol_test.py # masked-Peppol test (build + evaluate)
+```
+
 ## Routes (cheapest first, stop at the first accepted candidate)
 
 | # | Route | Needs | What it does |
@@ -39,18 +66,18 @@ pip install -r requirements.txt
 
 ```bash
 # 0. Shrink the Companies House file once (only useful columns + derived fields; chunked, low memory)
-python -m vatcrawl.slim_ch --ch ../unseen_data/BasicCompanyDataAsOneFile-2026-11-01.csv \
+python -m vatcrawl.prep.slim_ch --ch ../unseen_data/BasicCompanyDataAsOneFile-2026-11-01.csv \
     --out ../data/ch_slim.csv --active-only --drop-other-band
 
 # 1. Draw a frozen, stratified random sample from the slim file
-python -m vatcrawl.sample --ch ../data/ch_slim.csv --per-band 10 --seed 42 --out ../data/sample.csv
+python -m vatcrawl.prep.sample --ch ../data/ch_slim.csv --per-band 10 --seed 42 --out ../data/sample.csv
 
 # 2. (optional) domains.csv: company_number,domain  for companies whose website you know
 # 3. (optional) manual_search.csv: query,rank,url,title,snippet  (results you collected by hand;
-#    queries are printed by: python -c "from vatcrawl.search import build_queries; ...")
+#    queries are printed by: python -c "from vatcrawl.routes.search import build_queries; ...")
 
 # 4. Run the routes
-python -m vatcrawl.pipeline --sample sample.csv --peppol ../peppol_uk.csv \
+python -m vatcrawl.run.pipeline --sample sample.csv --peppol ../peppol_uk.csv \
     --domains domains.csv --search-csv manual_search.csv --out results.csv --log crawl_log.jsonl
 
 # 5. Verify every found_unverified row on https://www.gov.uk/check-uk-vat-number
@@ -58,7 +85,7 @@ python -m vatcrawl.pipeline --sample sample.csv --peppol ../peppol_uk.csv \
 #    For 'unknown' rows, add registration_evidence where you have it.
 
 # 6. Final outcomes + Part 2 tables (per band, per route, false-positive rates with 95% CI)
-python -m vatcrawl.report --results results.csv --out results_final.csv
+python -m vatcrawl.run.report --results results.csv --out results_final.csv
 ```
 
 Registration evidence from a website is only used when the site is confirmed to be the company's
@@ -69,12 +96,12 @@ Every result also carries `registration_prior` (from Companies House size band /
 ## Masked-Peppol test
 
 ```bash
-python -m vatcrawl.peppol_test build --peppol ../data/peppol_uk.csv --ch ../data/ch_slim.csv --n 40 --seed 7 \
+python -m vatcrawl.experiments.peppol_test build --peppol ../data/peppol_uk.csv --ch ../data/ch_slim.csv --n 40 --seed 7 \
     --exclude-dormant --out-sample ../data/peppol_test_sample.csv --out-truth ../data/peppol_test_truth.csv
-python -m vatcrawl.find_domains --sample ../data/peppol_test_sample.csv --out ../data/peppol_test_domains.csv
-python -m vatcrawl.pipeline --sample ../data/peppol_test_sample.csv --domains ../data/peppol_test_domains.csv \
+python -m vatcrawl.prep.find_domains --sample ../data/peppol_test_sample.csv --out ../data/peppol_test_domains.csv
+python -m vatcrawl.run.pipeline --sample ../data/peppol_test_sample.csv --domains ../data/peppol_test_domains.csv \
     --routes website --out ../data/peppol_test_results.csv --log ../data/peppol_test_log.jsonl
-python -m vatcrawl.peppol_test evaluate --results ../data/peppol_test_results.csv --truth ../data/peppol_test_truth.csv
+python -m vatcrawl.experiments.peppol_test evaluate --results ../data/peppol_test_results.csv --truth ../data/peppol_test_truth.csv
 ```
 
 ## Outputs
