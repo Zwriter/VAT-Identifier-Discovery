@@ -133,7 +133,21 @@ python -m vatcrawl.experiments.peppol_test evaluate --results ../data/peppol_tes
 python -m pytest -q tests
 ```
 
-31 tests, built from real cases met during research (LGM Products letterhead + EORI, Dale Techniche
+37 tests, built from real cases met during research (LGM Products letterhead + EORI, Dale Techniche
 footer with "No .4955915", Sammons Architectural planning-portal snippet, a directory page showing its
 own Irish VAT number, the "APM (SALES & SERVICE) UK" false match, Autofix in Peppol), plus an offline
 end-to-end run against local fake sites.
+
+## Common Crawl sample scan
+
+Streams a random sample of Common Crawl WET files (plain text, ~60 MB each) and keeps only
+(VAT number, labelled company number) pairs within 300 characters. Nothing else is written to disk.
+
+```bat
+python scripts\scan_common_crawl.py --files 5
+python scripts\scan_common_crawl.py --files 50 --ch ..\data\ch_slim.csv
+python scripts\scan_common_crawl.py --summary
+```
+
+Same `--seed` resumes where it stopped. Outputs: `data/cc_pairs.csv`, `data/cc_vats.csv`,
+`data/cc_stats.json`, and `data/cc_hmrc_check.csv` (20 random pairs to verify on HMRC).
